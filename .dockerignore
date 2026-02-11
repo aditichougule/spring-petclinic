@@ -1,0 +1,13 @@
+.gradle
+build
+target
+.git
+.gitignore
+README.md
+.idea
+.vscode
+*.iml
+.DS_Store
+*.log
+# Note: gradle-wrapper.jar is needed for the build, so we don't exclude it
+
