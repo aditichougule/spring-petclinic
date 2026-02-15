@@ -48,16 +48,12 @@ public class FeatureFlagController {
 
 	@GetMapping("/{id}")
 	public ResponseEntity<FeatureFlag> getById(@PathVariable Integer id) {
-		return service.findById(id)
-			.map(ResponseEntity::ok)
-			.orElse(ResponseEntity.notFound().build());
+		return service.findById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
 	}
 
 	@GetMapping("/name/{name}")
 	public ResponseEntity<FeatureFlag> getByName(@PathVariable String name) {
-		return service.findByName(name)
-			.map(ResponseEntity::ok)
-			.orElse(ResponseEntity.notFound().build());
+		return service.findByName(name).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
 	}
 
 	@GetMapping("/check/{name}")
@@ -77,8 +73,7 @@ public class FeatureFlagController {
 	}
 
 	@PutMapping("/{id}")
-	public ResponseEntity<FeatureFlag> update(@PathVariable Integer id,
-			@Valid @RequestBody FeatureFlag featureFlag) {
+	public ResponseEntity<FeatureFlag> update(@PathVariable Integer id, @Valid @RequestBody FeatureFlag featureFlag) {
 		try {
 			FeatureFlag updated = service.update(id, featureFlag);
 			return ResponseEntity.ok(updated);
@@ -111,4 +106,3 @@ public class FeatureFlagController {
 	}
 
 }
-

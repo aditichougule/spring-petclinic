@@ -15,14 +15,26 @@
  */
 package org.springframework.samples.petclinic.featureflag;
 
-import java.util.Optional;
+import org.junit.jupiter.api.Test;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import static org.assertj.core.api.Assertions.assertThat;
 
-public interface FeatureFlagRepository extends JpaRepository<FeatureFlag, Integer> {
+class FeatureFlagDisabledExceptionTests {
 
-	Optional<FeatureFlag> findByName(String name);
+	@Test
+	void shouldCreateExceptionWithMessage() {
+		String message = "Feature flag 'test_flag' is disabled";
+		FeatureFlagDisabledException exception = new FeatureFlagDisabledException(message);
 
-	boolean existsByName(String name);
+		assertThat(exception).isNotNull();
+		assertThat(exception.getMessage()).isEqualTo(message);
+	}
+
+	@Test
+	void shouldBeRuntimeException() {
+		FeatureFlagDisabledException exception = new FeatureFlagDisabledException("Test");
+
+		assertThat(exception).isInstanceOf(RuntimeException.class);
+	}
 
 }

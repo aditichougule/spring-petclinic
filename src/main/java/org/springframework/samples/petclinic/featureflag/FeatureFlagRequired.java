@@ -15,14 +15,17 @@
  */
 package org.springframework.samples.petclinic.featureflag;
 
-import java.util.Optional;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+@Target({ ElementType.METHOD, ElementType.TYPE })
+@Retention(RetentionPolicy.RUNTIME)
+public @interface FeatureFlagRequired {
 
-public interface FeatureFlagRepository extends JpaRepository<FeatureFlag, Integer> {
+	String value();
 
-	Optional<FeatureFlag> findByName(String name);
-
-	boolean existsByName(String name);
+	boolean throwException() default true;
 
 }

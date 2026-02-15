@@ -15,14 +15,10 @@
  */
 package org.springframework.samples.petclinic.featureflag;
 
-import java.util.Optional;
+public class FeatureFlagDisabledException extends RuntimeException {
 
-import org.springframework.data.jpa.repository.JpaRepository;
-
-public interface FeatureFlagRepository extends JpaRepository<FeatureFlag, Integer> {
-
-	Optional<FeatureFlag> findByName(String name);
-
-	boolean existsByName(String name);
+	public FeatureFlagDisabledException(String message) {
+		super(message);
+	}
 
 }

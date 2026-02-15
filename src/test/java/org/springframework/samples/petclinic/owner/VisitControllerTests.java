@@ -34,6 +34,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Optional;
 
+import org.springframework.samples.petclinic.featureflag.FeatureFlagService;
+
 /**
  * Test class for {@link VisitController}
  *
@@ -55,8 +57,12 @@ class VisitControllerTests {
 	@MockitoBean
 	private OwnerRepository owners;
 
+	@MockitoBean
+	private FeatureFlagService featureFlagService;
+
 	@BeforeEach
 	void init() {
+		given(featureFlagService.isEnabled("add_visit")).willReturn(true);
 		Owner owner = new Owner();
 		Pet pet = new Pet();
 		owner.addPet(pet);

@@ -57,8 +57,7 @@ public class FeatureFlagService {
 	@CacheEvict(value = "featureFlags", key = "#featureFlag.name")
 	public FeatureFlag create(FeatureFlag featureFlag) {
 		if (repository.existsByName(featureFlag.getName())) {
-			throw new IllegalArgumentException(
-					"Feature flag with name '" + featureFlag.getName() + "' already exists");
+			throw new IllegalArgumentException("Feature flag with name '" + featureFlag.getName() + "' already exists");
 		}
 		return repository.save(featureFlag);
 	}
@@ -68,10 +67,8 @@ public class FeatureFlagService {
 		FeatureFlag existing = repository.findById(id)
 			.orElseThrow(() -> new IllegalArgumentException("Feature flag not found with id: " + id));
 
-		if (!existing.getName().equals(featureFlag.getName())
-				&& repository.existsByName(featureFlag.getName())) {
-			throw new IllegalArgumentException(
-					"Feature flag with name '" + featureFlag.getName() + "' already exists");
+		if (!existing.getName().equals(featureFlag.getName()) && repository.existsByName(featureFlag.getName())) {
+			throw new IllegalArgumentException("Feature flag with name '" + featureFlag.getName() + "' already exists");
 		}
 
 		existing.setName(featureFlag.getName());
@@ -98,4 +95,3 @@ public class FeatureFlagService {
 	}
 
 }
-

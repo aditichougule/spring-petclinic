@@ -22,6 +22,7 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.samples.petclinic.featureflag.FeatureFlagService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -52,8 +53,11 @@ class OwnerController {
 
 	private final OwnerRepository owners;
 
-	public OwnerController(OwnerRepository owners) {
+	private final FeatureFlagService featureFlagService;
+
+	public OwnerController(OwnerRepository owners, FeatureFlagService featureFlagService) {
 		this.owners = owners;
+		this.featureFlagService = featureFlagService;
 	}
 
 	@InitBinder
@@ -94,13 +98,16 @@ class OwnerController {
 	@GetMapping("/owners")
 	public String processFindForm(@RequestParam(defaultValue = "1") int page, Owner owner, BindingResult result,
 			Model model) {
-		// allow parameterless GET request for /owners to return all records
-		String lastName = owner.getLastName();
-		if (lastName == null) {
-			lastName = ""; // empty string signifies broadest possible search
+		if (!featureFlagService.isEnabled("owner_search")) {
+			result.rejectValue("lastName", "disabled", "Owner search is currently disabled");
+			return "owners/findOwners";
 		}
 
-		// find owners by last name
+		String lastName = owner.getLastName();
+		if (lastName == null) {
+			lastName = "";
+		}
+
 		Page<Owner> ownersResults = findPaginatedForOwnersLastName(page, lastName);
 		if (ownersResults.isEmpty()) {
 			// no owners found

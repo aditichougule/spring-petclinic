@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.springframework.samples.petclinic.featureflag.FeatureFlagService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.util.Assert;
@@ -53,9 +54,12 @@ class PetController {
 
 	private final PetTypeRepository types;
 
-	public PetController(OwnerRepository owners, PetTypeRepository types) {
+	private final FeatureFlagService featureFlagService;
+
+	public PetController(OwnerRepository owners, PetTypeRepository types, FeatureFlagService featureFlagService) {
 		this.owners = owners;
 		this.types = types;
+		this.featureFlagService = featureFlagService;
 	}
 
 	@ModelAttribute("types")
@@ -96,7 +100,11 @@ class PetController {
 	}
 
 	@GetMapping("/pets/new")
-	public String initCreationForm(Owner owner, ModelMap model) {
+	public String initCreationForm(Owner owner, ModelMap model, RedirectAttributes redirectAttributes) {
+		if (!featureFlagService.isEnabled("add_new_pet")) {
+			redirectAttributes.addFlashAttribute("error", "Adding new pets is currently disabled");
+			return "redirect:/owners/{ownerId}";
+		}
 		Pet pet = new Pet();
 		owner.addPet(pet);
 		return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
@@ -105,6 +113,11 @@ class PetController {
 	@PostMapping("/pets/new")
 	public String processCreationForm(Owner owner, @Valid Pet pet, BindingResult result,
 			RedirectAttributes redirectAttributes) {
+
+		if (!featureFlagService.isEnabled("add_new_pet")) {
+			redirectAttributes.addFlashAttribute("error", "Adding new pets is currently disabled");
+			return "redirect:/owners/{ownerId}";
+		}
 
 		if (StringUtils.hasText(pet.getName()) && pet.isNew() && owner.getPet(pet.getName(), true) != null)
 			result.rejectValue("name", "duplicate", "already exists");

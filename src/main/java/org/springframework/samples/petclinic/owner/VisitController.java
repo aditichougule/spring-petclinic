@@ -18,6 +18,7 @@ package org.springframework.samples.petclinic.owner;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.samples.petclinic.featureflag.FeatureFlagService;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.WebDataBinder;
@@ -43,8 +44,11 @@ class VisitController {
 
 	private final OwnerRepository owners;
 
-	public VisitController(OwnerRepository owners) {
+	private final FeatureFlagService featureFlagService;
+
+	public VisitController(OwnerRepository owners, FeatureFlagService featureFlagService) {
 		this.owners = owners;
+		this.featureFlagService = featureFlagService;
 	}
 
 	@InitBinder
@@ -79,18 +83,23 @@ class VisitController {
 		return visit;
 	}
 
-	// Spring MVC calls method loadPetWithVisit(...) before initNewVisitForm is
-	// called
 	@GetMapping("/owners/{ownerId}/pets/{petId}/visits/new")
-	public String initNewVisitForm() {
+	public String initNewVisitForm(@PathVariable("ownerId") int ownerId, RedirectAttributes redirectAttributes) {
+		if (!featureFlagService.isEnabled("add_visit")) {
+			redirectAttributes.addFlashAttribute("error", "Adding visits is currently disabled");
+			return "redirect:/owners/{ownerId}";
+		}
 		return "pets/createOrUpdateVisitForm";
 	}
 
-	// Spring MVC calls method loadPetWithVisit(...) before processNewVisitForm is
-	// called
 	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/new")
 	public String processNewVisitForm(@ModelAttribute Owner owner, @PathVariable int petId, @Valid Visit visit,
 			BindingResult result, RedirectAttributes redirectAttributes) {
+		if (!featureFlagService.isEnabled("add_visit")) {
+			redirectAttributes.addFlashAttribute("error", "Adding visits is currently disabled");
+			return "redirect:/owners/{ownerId}";
+		}
+
 		if (result.hasErrors()) {
 			return "pets/createOrUpdateVisitForm";
 		}

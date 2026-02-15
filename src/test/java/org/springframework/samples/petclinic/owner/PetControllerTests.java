@@ -32,6 +32,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.samples.petclinic.featureflag.FeatureFlagService;
+
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -64,8 +66,12 @@ class PetControllerTests {
 	@MockitoBean
 	private PetTypeRepository types;
 
+	@MockitoBean
+	private FeatureFlagService featureFlagService;
+
 	@BeforeEach
 	void setup() {
+		given(featureFlagService.isEnabled("add_new_pet")).willReturn(true);
 		PetType cat = new PetType();
 		cat.setId(3);
 		cat.setName("hamster");

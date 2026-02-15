@@ -40,6 +40,231 @@ You can then access the Petclinic at <http://localhost:8080/>.
 You can, of course, run Petclinic in your favorite IDE.
 See below for more details.
 
+## Feature Flags
+
+This application includes a feature flag system that allows you to enable or disable specific features at runtime without redeploying the application.
+
+### How to Run the App
+
+The application runs the same way as before. Feature flags are automatically initialized on startup with default values:
+
+```bash
+./mvnw spring-boot:run
+```
+
+Or with Gradle:
+
+```bash
+./gradlew bootRun
+```
+
+The application will be available at <http://localhost:8080/>.
+
+### Assumptions and Design Decisions
+
+1. **Database Persistence**: Feature flags are stored in the database (`feature_flags` table) to ensure persistence across application restarts. The schema is included for H2, MySQL, and PostgreSQL.
+
+2. **Caching**: Feature flag status is cached using Spring Cache (Caffeine) to minimize database queries. The cache is automatically evicted when flags are updated.
+
+3. **Default Flags**: Three feature flags are automatically created on startup if they don't exist:
+   - `add_new_pet` (enabled by default)
+   - `add_visit` (enabled by default)
+   - `owner_search` (enabled by default)
+
+4. **Helper Function**: The `FeatureFlagService.isEnabled(String flagName)` method can be called anywhere in the application to check flag status.
+
+5. **Custom Annotation**: A `@FeatureFlagRequired` annotation is available for declarative feature flag checks using Aspect-Oriented Programming (AOP).
+
+6. **Error Handling**: When a feature is disabled:
+   - Controllers redirect users with an error message
+   - The custom annotation can either throw an exception or return a default value
+
+### Features with Flags
+
+| Flag Name | What It Controls | Implementation Location |
+|-----------|------------------|------------------------|
+| `add_new_pet` | Controls the ability to add new pets to owners | `PetController.initCreationForm()` (line 102-111)<br>`PetController.processCreationForm()` (line 113-138)<br>**File**: `src/main/java/org/springframework/samples/petclinic/owner/PetController.java` |
+| `add_visit` | Controls the ability to add visits for pets | `VisitController.initNewVisitForm()` (line 86-93)<br>`VisitController.processNewVisitForm()` (line 95-111)<br>**File**: `src/main/java/org/springframework/samples/petclinic/owner/VisitController.java` |
+| `owner_search` | Controls the ability to search for owners by last name | `OwnerController.processFindForm()` (line 98-104)<br>**File**: `src/main/java/org/springframework/samples/petclinic/owner/OwnerController.java` |
+
+When a feature flag is disabled:
+- **Add New Pet**: Users are redirected to the owner details page with an error message
+- **Add Visit**: Users are redirected to the owner details page with an error message
+- **Owner Search**: The search form displays a validation error message
+
+### API Documentation for Flag Management Endpoints
+
+The feature flag management API is available at `/api/feature-flags`. All endpoints return JSON.
+
+#### Get All Feature Flags
+
+```http
+GET /api/feature-flags
+```
+
+**Response**: `200 OK`
+```json
+[
+  {
+    "id": 1,
+    "name": "add_new_pet",
+    "enabled": true,
+    "description": "Enable adding new pets",
+    "createdAt": "2025-02-15T10:00:00",
+    "updatedAt": "2025-02-15T10:00:00"
+  }
+]
+```
+
+#### Get Feature Flag by ID
+
+```http
+GET /api/feature-flags/{id}
+```
+
+**Response**: `200 OK` or `404 Not Found`
+
+#### Get Feature Flag by Name
+
+```http
+GET /api/feature-flags/name/{name}
+```
+
+**Example**: `GET /api/feature-flags/name/add_new_pet`
+
+**Response**: `200 OK` or `404 Not Found`
+
+#### Check if Feature Flag is Enabled
+
+```http
+GET /api/feature-flags/check/{name}
+```
+
+**Example**: `GET /api/feature-flags/check/add_new_pet`
+
+**Response**: `200 OK`
+```json
+true
+```
+
+#### Create Feature Flag
+
+```http
+POST /api/feature-flags
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+  "name": "new_feature",
+  "enabled": false,
+  "description": "Description of the new feature"
+}
+```
+
+**Response**: `201 Created` or `400 Bad Request` (if name already exists)
+
+#### Update Feature Flag
+
+```http
+PUT /api/feature-flags/{id}
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+  "name": "add_new_pet",
+  "enabled": false,
+  "description": "Updated description"
+}
+```
+
+**Response**: `200 OK` or `404 Not Found` or `400 Bad Request` (if name conflicts)
+
+#### Delete Feature Flag
+
+```http
+DELETE /api/feature-flags/{id}
+```
+
+**Response**: `204 No Content` or `404 Not Found`
+
+#### Toggle Feature Flag
+
+```http
+PATCH /api/feature-flags/{id}/toggle
+```
+
+**Response**: `200 OK` with updated flag or `404 Not Found`
+
+**Example**:
+```bash
+# Disable the add_new_pet feature
+curl -X PATCH http://localhost:8080/api/feature-flags/1/toggle
+
+# Enable it again
+curl -X PATCH http://localhost:8080/api/feature-flags/1/toggle
+```
+
+### Using Feature Flags in Code
+
+#### Method 1: Direct Service Call
+
+```java
+@Controller
+public class MyController {
+    
+    private final FeatureFlagService featureFlagService;
+    
+    @GetMapping("/my-feature")
+    public String myFeature() {
+        if (!featureFlagService.isEnabled("my_feature")) {
+            return "redirect:/error";
+        }
+        // Feature logic here
+        return "myFeatureView";
+    }
+}
+```
+
+#### Method 2: Custom Annotation
+
+```java
+@RestController
+public class MyController {
+    
+    @FeatureFlagRequired("my_feature")
+    @GetMapping("/api/data")
+    public ResponseEntity<Data> getData() {
+        // This method will only execute if "my_feature" is enabled
+        // Otherwise, it throws FeatureFlagDisabledException
+        return ResponseEntity.ok(new Data());
+    }
+    
+    @FeatureFlagRequired(value = "my_feature", throwException = false)
+    @GetMapping("/api/optional")
+    public ResponseEntity<Data> getOptionalData() {
+        // If flag is disabled, returns null (or false for boolean)
+        return ResponseEntity.ok(new Data());
+    }
+}
+```
+
+### Feature Flag Module Structure
+
+The feature flag system consists of the following components:
+
+- **Entity**: `FeatureFlag.java` - JPA entity for database persistence
+- **Repository**: `FeatureFlagRepository.java` - Spring Data JPA repository
+- **Service**: `FeatureFlagService.java` - Business logic and helper methods
+- **Controller**: `FeatureFlagController.java` - REST API endpoints
+- **Initializer**: `FeatureFlagInitializer.java` - Creates default flags on startup
+- **Annotation**: `FeatureFlagRequired.java` - Custom annotation for AOP
+- **Aspect**: `FeatureFlagAspect.java` - AOP implementation for annotation
+- **Exception**: `FeatureFlagDisabledException.java` - Custom exception for disabled flags
+
 ## Building a Container
 
 There is no `Dockerfile` in this project. You can build a container image (if you have a docker daemon) using the Spring Boot build plugin:
